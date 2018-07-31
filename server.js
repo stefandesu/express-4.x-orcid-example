@@ -1,28 +1,27 @@
 var express = require('express');
 var passport = require('passport');
-var Strategy = require('passport-github').Strategy;
+var Strategy = require('passport-orcid').Strategy;
 require("dotenv").config();
 
 var port = process.env.PORT || 3000;
 
-// Configure the GitHub strategy for use by Passport.
+// Configure the ORCID strategy for use by Passport.
 //
 // OAuth 2.0-based strategies require a `verify` function which receives the
-// credential (`accessToken`) for accessing the GitHub API on the user's
+// credential (`accessToken`) for accessing the ORCID API on the user's
 // behalf, along with the user's profile.  The function must invoke `cb`
 // with a user object, which will be set at `req.user` in route handlers after
 // authentication.
 passport.use(new Strategy({
+    sandbox: process.env.NODE_ENV !== 'production', // use the sandbox for non-production environments
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: `http://localhost:${port}/login/github/return`
+    callbackURL: `http://localhost:${port}/login/orcid/return`
   },
-  function(accessToken, refreshToken, profile, cb) {
-    // In this example, the user's GitHub profile is supplied as the user
-    // record.  In a production-quality application, the GitHub profile should
-    // be associated with a user record in the application's database, which
-    // allows for account linking and authentication with other identity
-    // providers.
+  function(accessToken, refreshToken, params, profile, cb) {
+    // `profile` is empty as ORCID has no generic profile URL,
+    // so populate the profile object from the params instead.
+    profile = { id: params.orcid, displayName: params.name }
     return cb(null, profile);
   }));
 
@@ -34,7 +33,7 @@ passport.use(new Strategy({
 // production-quality application, this would typically be as simple as
 // supplying the user ID when serializing, and querying the user record by ID
 // from the database when deserializing.  However, due to the fact that this
-// example does not have a database, the complete GitHub profile is serialized
+// example does not have a database, the complete ORCID profile is serialized
 // and deserialized.
 passport.serializeUser(function(user, cb) {
   cb(null, user);
@@ -76,11 +75,11 @@ app.get('/login',
     res.render('login');
   });
 
-app.get('/login/github',
-  passport.authenticate('github'));
+app.get('/login/orcid',
+  passport.authenticate('orcid'));
 
-app.get('/login/github/return',
-  passport.authenticate('github', { failureRedirect: '/login' }),
+app.get('/login/orcid/return',
+  passport.authenticate('orcid', { failureRedirect: '/login' }),
   function(req, res) {
     res.redirect('/');
   });
